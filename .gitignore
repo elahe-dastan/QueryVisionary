@@ -1,0 +1,5 @@
+.idea
+user_query.csv
+parsbert_model
+parsbert_tokenizer
+.venv/
