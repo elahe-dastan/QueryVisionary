@@ -1,5 +1,15 @@
 .idea
 user_query.csv
+
 parsbert_model
 parsbert_tokenizer
+
+albert_model
+albert_tokenizer
+
+roberta_model
+roberta_tokenizer
+
+results/
+
 .venv/

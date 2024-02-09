@@ -6,6 +6,9 @@ from datasets import Dataset
 from transformers import Trainer, TrainingArguments
 import pandas as pd
 
+torch.cuda.empty_cache()
+print(torch.cuda.memory_summary())
+
 if os.path.isdir('./parsbert_model') and os.path.isdir('./parsbert_tokenizer'):
     model = AutoModelForMaskedLM.from_pretrained('./parsbert_model')
     tokenizer = AutoTokenizer.from_pretrained('./parsbert_tokenizer')
@@ -13,6 +16,8 @@ if os.path.isdir('./parsbert_model') and os.path.isdir('./parsbert_tokenizer'):
 else:
     # Load ParsBERT model and tokenizer
     model_name = "HooshvareLab/bert-fa-base-uncased"
+    # model_name = "HooshvareLab/roberta-fa-zwnj-base"
+    # model_name = "HooshvareLab/albert-fa-zwnj-base-v2"
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForMaskedLM.from_pretrained(model_name)
@@ -43,7 +48,7 @@ def create_dataset():
         # Replace this with your dataset's text column
         sentences = examples["text"]
         # Tokenize the texts and prepare inputs and labels
-        inputs = tokenizer(sentences, padding="max_length", truncation=True, max_length=512, return_tensors="pt")
+        inputs = tokenizer(sentences, padding="max_length", truncation=True, max_length=2, return_tensors="pt")
         inputs["labels"] = inputs.input_ids.detach().clone()
         # Masking operation here (this is just a simple example)
         # You should implement a more sophisticated masking strategy
@@ -70,10 +75,11 @@ def create_dataset():
 def fine_tune(tokenized_datasets):
     training_args = TrainingArguments(
         output_dir="./results",
-        learning_rate=2e-5,
-        per_device_train_batch_size=4,
-        num_train_epochs=3,
+        learning_rate=2e-3,
+        per_device_train_batch_size=64,
+        num_train_epochs=30,
         weight_decay=0.01,
+        # fp16=True,
     )
 
     trainer = Trainer(
@@ -82,7 +88,9 @@ def fine_tune(tokenized_datasets):
         train_dataset=tokenized_datasets,
     )
 
+    print(torch.cuda.memory_summary())
     trainer.train()
+    print(torch.cuda.memory_summary())
 
 
 
@@ -107,3 +115,37 @@ fine_tune(tokenized_datasets)
 # Adjust the example usage accordingly
 predicted_next_words = predict_next_words("میدان انقلاب", 4)
 print(f"Predicted next words: {predicted_next_words}")
+
+
+# from torch.utils.data import Dataset, DataLoader
+# import pandas as pd
+# from transformers import AutoTokenizer
+# import torch
+#
+# class CustomDataset(Dataset):
+#     def __init__(self, csv_file, tokenizer, max_length=512):
+#         self.dataframe = pd.read_csv(csv_file)
+#         self.tokenizer = tokenizer
+#         self.max_length = max_length
+#
+#     def __len__(self):
+#         return len(self.dataframe)
+#
+#     def __getitem__(self, idx):
+#         text = self.dataframe.iloc[idx]['search_input']
+#         inputs = self.tokenizer(text, max_length=self.max_length, padding='max_length', truncation=True, return_tensors="pt")
+#         return inputs
+#
+# # Example usage with your tokenizer and file path
+# tokenizer = AutoTokenizer.from_pretrained("HooshvareLab/albert-fa-zwnj-base-v2")
+# custom_dataset = CustomDataset(csv_file='user_query.csv', tokenizer=tokenizer)
+#
+# # DataLoader for batch processing
+# data_loader = DataLoader(custom_dataset, batch_size=16, shuffle=True)
+#
+# # In your training loop, iterate over `data_loader` instead of `tokenized_datasets`
+# for batch in data_loader:
+#     # Process each batch
+#     # Your training logic here, e.g., pass `batch` to your model
+#     pass
+
